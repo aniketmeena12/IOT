@@ -1,0 +1,432 @@
+{
+  "uid": "production-machine-dashboard",
+  "title": "Production Machine - Live Pulse Analysis",
+  "description": "Real-time monitoring of production machine pulses, intra-series (pulse) gaps, and inter-series (material feed) gaps.",
+  "tags": ["iot", "production-machine", "influxdb"],
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Live Pulse Stream",
+      "description": "Every pulse from the sensor as it arrives. Gaps between clusters = material feed.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 5,
+            "showPoints": "always",
+            "lineWidth": 0,
+            "fillOpacity": 0,
+            "axisCenteredZero": false,
+            "axisLabel": "Pulse"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Intra-Series Gap (Time Between Pulses)",
+      "description": "Time difference between consecutive pulses within each product. Spikes indicate series boundaries (filtered out in averages).",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "pointSize": 3,
+            "showPoints": "auto"
+          },
+          "unit": "ms",
+          "displayName": "Gap (ms)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value < 200)"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Inter-Series Gap (Material Feed Time)",
+      "description": "Time between the last pulse of one product and the first pulse of the next product.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "always"
+          },
+          "unit": "ms",
+          "displayName": "Gap (ms)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value >= 200)"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Average Intra-Series Gap (last 5 min)",
+      "description": "Rolling average of the time between consecutive pulses within products.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 16 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 80, "color": "yellow" },
+              { "value": 120, "color": "red" }
+            ]
+          },
+          "unit": "ms",
+          "displayName": "Avg Pulse Gap"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value < 200)\n  |> mean()"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Average Inter-Series Gap (last 5 min)",
+      "description": "Rolling average of material feed time between products.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 16 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 600, "color": "yellow" },
+              { "value": 1000, "color": "red" }
+            ]
+          },
+          "unit": "ms",
+          "displayName": "Avg Feed Gap"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value >= 200)\n  |> mean()"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Total Products Produced (last 5 min)",
+      "description": "Count of inter-series boundaries detected, which equals the number of products completed.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 16 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "blue" }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Products"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value >= 200)\n  |> count()"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Total Pulses (last 5 min)",
+      "description": "Total number of pulses recorded.",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 16 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "purple" }
+            ]
+          },
+          "unit": "short",
+          "displayName": "Pulses"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> group()\n  |> count()"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Key Metrics Over Time",
+      "description": "Avg intra-series gap, avg inter-series gap, products produced, and total pulses — windowed every 30s and refreshed periodically.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 21 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": true
+          },
+          "unit": "ms"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byFrameRefID", "options": "A" },
+            "properties": [
+              { "id": "displayName", "value": "Avg Intra-Series Gap" }
+            ]
+          },
+          {
+            "matcher": { "id": "byFrameRefID", "options": "B" },
+            "properties": [
+              { "id": "displayName", "value": "Avg Inter-Series Gap (Material Feed)" }
+            ]
+          },
+          {
+            "matcher": { "id": "byFrameRefID", "options": "C" },
+            "properties": [
+              { "id": "displayName", "value": "Products Produced" },
+              { "id": "unit", "value": "short" },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.drawStyle", "value": "bars" },
+              { "id": "custom.fillOpacity", "value": 30 }
+            ]
+          },
+          {
+            "matcher": { "id": "byFrameRefID", "options": "D" },
+            "properties": [
+              { "id": "displayName", "value": "Total Pulses" },
+              { "id": "unit", "value": "short" },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "custom.drawStyle", "value": "bars" },
+              { "id": "custom.fillOpacity", "value": 15 }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "lastNotNull"] }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value < 200)\n  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)",
+          "hide": false
+        },
+        {
+          "refId": "B",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value >= 200)\n  |> aggregateWindow(every: 30s, fn: mean, createEmpty: false)",
+          "hide": false
+        },
+        {
+          "refId": "C",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})\n  |> filter(fn: (r) => r._value >= 200)\n  |> aggregateWindow(every: 30s, fn: count, createEmpty: false)",
+          "hide": false
+        },
+        {
+          "refId": "D",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> group()\n  |> aggregateWindow(every: 30s, fn: count, createEmpty: false)",
+          "hide": false
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Pulses Per Product (Histogram over last 5 min)",
+      "description": "Number of pulses in each product series.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 29 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "semi-dark-blue" },
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0,
+            "fillOpacity": 80,
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "auto"
+          },
+          "unit": "short",
+          "displayName": "Pulses"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"turn_number\")\n  |> group(columns: [\"series\"])\n  |> max()\n  |> group()\n  |> sort(columns: [\"_time\"])"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Gap Distribution (All Consecutive Gaps)",
+      "description": "All time gaps between consecutive pulses. Low values = intra-series pulses, high spikes = inter-series material feed.",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 29 },
+      "datasource": { "type": "influxdb", "uid": "" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "auto"
+          },
+          "unit": "ms",
+          "displayName": "Gap (ms)"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "influxdb", "uid": "" },
+          "query": "from(bucket: \"spring_data\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"spring_pulses\" and r._field == \"pulse\")\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> sort(columns: [\"_time\"])\n  |> elapsed(unit: 1ms)\n  |> drop(columns: [\"_value\"])\n  |> rename(columns: {elapsed: \"_value\"})"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 1,
+  "templating": { "list": [] },
+  "annotations": { "list": [] }
+}
