@@ -1,2 +1,3 @@
 # Secrets and config files with credentials
 grafana-cloud/.grafana_cloud_config
+grafana-cloud/deploy_now.py
