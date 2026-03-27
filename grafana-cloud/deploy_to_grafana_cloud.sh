@@ -14,7 +14,7 @@ NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
-DASHBOARD_JSON="${PROJECT_DIR}/grafana/dashboards/spring_machine.json"
+DASHBOARDS_DIR="${PROJECT_DIR}/grafana/dashboards"
 CONFIG_FILE="${SCRIPT_DIR}/.grafana_cloud_config"
 
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -175,20 +175,26 @@ DS_INFO=$(grafana_api GET "/datasources/name/InfluxDB-Flux")
 DS_UID=$(echo "${DS_INFO}" | sed '$d' | python3 -c "import sys,json; print(json.load(sys.stdin)['uid'])" 2>/dev/null)
 echo -e "  Datasource UID: ${CYAN}${DS_UID}${NC}"
 
-# ── Step 4: Import Dashboard ────────────────────────────────────────────────
+# ── Step 4: Import Dashboards ──────────────────────────────────────────────
 echo ""
-echo -e "${CYAN}[4/4] Importing dashboard...${NC}"
+echo -e "${CYAN}[4/4] Importing dashboards...${NC}"
 
-if [[ ! -f "${DASHBOARD_JSON}" ]]; then
-    echo -e "${RED}  ✗ Dashboard JSON not found at ${DASHBOARD_JSON}${NC}"
-    exit 1
-fi
+DASHBOARD_COUNT=0
+DASHBOARD_URLS=""
 
-# Read and patch the dashboard JSON:
-# 1. Replace all empty datasource UIDs with the real one
-# 2. Remove id field (let Grafana Cloud assign one)
-# 3. Set version to null for fresh import
-PATCHED_DASHBOARD=$(python3 <<PYEOF
+for DASHBOARD_JSON in "${DASHBOARDS_DIR}"/*.json; do
+    DASHBOARD_NAME=$(basename "${DASHBOARD_JSON}" .json)
+    
+    if [[ ! -f "${DASHBOARD_JSON}" ]]; then
+        echo -e "${YELLOW}  ⊘ No dashboards found in ${DASHBOARDS_DIR}${NC}"
+        continue
+    fi
+
+    # Read and patch the dashboard JSON:
+    # 1. Replace all empty datasource UIDs with the real one
+    # 2. Remove id field (let Grafana Cloud assign one)
+    # 3. Set version to null for fresh import
+    PATCHED_DASHBOARD=$(python3 <<PYEOF
 import json, sys
 
 with open("${DASHBOARD_JSON}", "r") as f:
@@ -223,28 +229,32 @@ print(json.dumps(payload))
 PYEOF
 )
 
-IMPORT_RESPONSE=$(grafana_api POST "/dashboards/db" "${PATCHED_DASHBOARD}")
-IMPORT_CODE=$(echo "${IMPORT_RESPONSE}" | tail -1)
-IMPORT_BODY=$(echo "${IMPORT_RESPONSE}" | sed '$d')
+    IMPORT_RESPONSE=$(grafana_api POST "/dashboards/db" "${PATCHED_DASHBOARD}")
+    IMPORT_CODE=$(echo "${IMPORT_RESPONSE}" | tail -1)
+    IMPORT_BODY=$(echo "${IMPORT_RESPONSE}" | sed '$d')
 
-if [[ "${IMPORT_CODE}" == "200" ]]; then
-    DASH_URL=$(echo "${IMPORT_BODY}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null)
-    echo -e "${GREEN}  ✓ Dashboard imported successfully!${NC}"
-    echo ""
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}  🎉 Deployment Complete!${NC}"
-    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo ""
-    echo -e "  ${BOLD}Dashboard URL:${NC}"
-    echo -e "  ${CYAN}${GRAFANA_CLOUD_URL}${DASH_URL}?refresh=5s${NC}"
-    echo ""
-    echo -e "  ${BOLD}What's deployed:${NC}"
-    echo -e "  • InfluxDB Flux datasource → ${INFLUXDB_PUBLIC_URL}"
-    echo -e "  • 10-panel live dashboard (auto-refresh 5s)"
-    echo ""
-    echo -e "  ${YELLOW}⚠ Keep your tunnel running so Grafana Cloud can reach InfluxDB!${NC}"
-else
-    echo -e "${RED}  ✗ Failed to import dashboard (HTTP ${IMPORT_CODE})${NC}"
-    echo "${IMPORT_BODY}"
-    exit 1
-fi
+    if [[ "${IMPORT_CODE}" == "200" ]]; then
+        DASH_URL=$(echo "${IMPORT_BODY}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('url',''))" 2>/dev/null)
+        echo -e "${GREEN}  ✓ ${DASHBOARD_NAME}${NC}"
+        DASHBOARD_URLS="${DASHBOARD_URLS}${GRAFANA_CLOUD_URL}${DASH_URL}?refresh=5s\n"
+        ((DASHBOARD_COUNT++))
+    else
+        echo -e "${RED}  ✗ Failed to import ${DASHBOARD_NAME} (HTTP ${IMPORT_CODE})${NC}"
+        echo "${IMPORT_BODY}"
+        exit 1
+    fi
+done
+
+echo ""
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}  🎉 Deployment Complete!${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+echo -e "  ${BOLD}Dashboards (${DASHBOARD_COUNT}):${NC}"
+echo -e "${DASHBOARD_URLS}" | sed 's/^/  /'
+echo ""
+echo -e "  ${BOLD}What's deployed:${NC}"
+echo -e "  • InfluxDB Flux datasource → ${INFLUXDB_PUBLIC_URL}"
+echo -e "  • ${DASHBOARD_COUNT} live dashboards (auto-refresh 5s)"
+echo ""
+echo -e "  ${YELLOW}⚠ Keep your tunnel running so Grafana Cloud can reach InfluxDB!${NC}"

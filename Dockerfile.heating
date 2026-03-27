@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY heating_simulation.py .
+
+CMD ["python", "-u", "heating_simulation.py", "--show-temp", "--steps", "0"]
