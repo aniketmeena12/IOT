@@ -46,7 +46,7 @@ services:
         condition: service_healthy
 
   # --------------------------------------------------------------------------
-  # Pulse Simulator (our Python app)
+  # Pulse Simulator (M18 printing machine)
   # --------------------------------------------------------------------------
   pulse_simulator:
     build:
@@ -65,6 +65,25 @@ services:
       INTER_SERIES_JITTER: "0.08"     # ±80 ms random jitter
       PULSES_PER_PRODUCT_MIN: "8"     # min pulses per product
       PULSES_PER_PRODUCT_MAX: "15"    # max pulses per product
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Heating Simulation (Corrugated manufacturing heater)
+  # --------------------------------------------------------------------------
+  heating_simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.heating
+    container_name: spring_heating_simulator
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: my-super-secret-token
+      INFLUXDB_ORG: spring_factory
+      INFLUXDB_BUCKET: spring_data
+      MACHINE_NAME: smart_heater_01
     depends_on:
       influxdb:
         condition: service_healthy
