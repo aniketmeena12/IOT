@@ -39,7 +39,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -81,7 +81,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -15m, stop: now())\n  |> filter(fn: (r) => r._measurement == \"spring_heating\")\n  |> filter(fn: (r) => r._field == \"sensor_temp\" or r._field == \"target\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")"
         }
@@ -100,7 +100,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -144,7 +144,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -15m, stop: now())\n  |> filter(fn: (r) => r._measurement == \"spring_heating\" and r._field == \"power\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")"
         }
@@ -163,7 +163,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -209,7 +209,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -15m, stop: now())\n  |> filter(fn: (r) => r._measurement == \"spring_heating\")\n  |> filter(fn: (r) => r._field == \"ambient\" or r._field == \"humidity\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")"
         }
@@ -228,7 +228,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -270,7 +270,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_heating\" and r._field == \"error\")\n  |> last()"
         }
@@ -289,7 +289,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -347,7 +347,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_heating\" and r._field == \"system_fault\")\n  |> last()"
         }
@@ -366,7 +366,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -408,7 +408,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_heating\" and r._field == \"alarm_count\")\n  |> last()"
         }
@@ -427,7 +427,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -452,7 +452,7 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -15m, stop: now())\n  |> filter(fn: (r) => r._measurement == \"spring_heating\")\n  |> filter(fn: (r) => r._field == \"p_term\" or r._field == \"i_term\" or r._field == \"d_term\")\n  |> aggregateWindow(every: 10s, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")"
         }
@@ -471,11 +471,11 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "string",
+          "unit": "none",
           "color": {
             "mode": "thresholds"
           },
@@ -494,18 +494,18 @@
       "options": {
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "last"
           ]
         },
         "textMode": "value",
-        "colorMode": "value"
+        "colorMode": "background"
       },
       "targets": [
         {
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_heating\" and r._field == \"state\")\n  |> last()"
         }
@@ -524,7 +524,7 @@
       },
       "datasource": {
         "type": "influxdb",
-        "uid": "influxdb-uid"
+        "uid": "${DS_INFLUXDB}"
       },
       "fieldConfig": {
         "defaults": {
@@ -543,11 +543,21 @@
           "refId": "A",
           "datasource": {
             "type": "influxdb",
-            "uid": "influxdb-uid"
+            "uid": "${DS_INFLUXDB}"
           },
           "query": "from(bucket: \"spring_data\")\n  |> range(start: -5m)\n  |> filter(fn: (r) => r._measurement == \"spring_heating\")\n  |> filter(fn: (r) => r._field == \"temp_mode\" or r._field == \"hum_mode\" or r._field == \"amb_mode\")\n  |> last()\n  |> pivot(rowKey: [\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"_time\", \"temp_mode\", \"hum_mode\", \"amb_mode\"])"
         }
       ]
+    }
+  ],
+  "__inputs": [
+    {
+      "name": "DS_INFLUXDB",
+      "label": "InfluxDB",
+      "description": "InfluxDB datasource",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
     }
   ]
 }

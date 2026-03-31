@@ -29,7 +29,7 @@ import sys
 from datetime import datetime, timezone
 
 from influxdb_client import InfluxDBClient, Point, WritePrecision
-from influxdb_client.client.write_api import SYNCHRONOUS
+from influxdb_client.client.write_api import ASYNCHRONOUS
 
 # ---------------------------------------------------------------------------
 # Configuration from environment
@@ -65,7 +65,7 @@ signal.signal(signal.SIGTERM, _shutdown)
 def main():
     print("[Simulator] Connecting to InfluxDB at", INFLUXDB_URL)
     client = InfluxDBClient(url=INFLUXDB_URL, token=INFLUXDB_TOKEN, org=INFLUXDB_ORG)
-    write_api = client.write_api(write_options=SYNCHRONOUS)
+    write_api = client.write_api(write_options=ASYNCHRONOUS)
 
     # Wait briefly for InfluxDB to be fully ready
     for attempt in range(10):

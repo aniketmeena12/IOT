@@ -4,7 +4,7 @@
 # Runs ONLY InfluxDB + Pulse Simulator (no local Grafana).
 #
 # Usage:
-#   docker compose -f docker-compose.cloud.yml up -d
+#   docker-compose -f docker-compose.cloud.yml up -d
 # =============================================================================
 version: "3.8"
 
@@ -26,11 +26,13 @@ services:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-token
     volumes:
       - influxdb_data:/var/lib/influxdb2
+    dns_search: []
     healthcheck:
       test: ["CMD", "influx", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # --------------------------------------------------------------------------
   # Nginx reverse proxy (stabilises connections from Grafana Cloud)
@@ -42,6 +44,27 @@ services:
       - "8087:8087"
     volumes:
       - ./nginx-influxdb.conf:/etc/nginx/conf.d/default.conf:ro
+    dns_search: []
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
+  # Heating Simulator
+  # --------------------------------------------------------------------------
+  heating_simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile.heating
+    container_name: spring_heating_simulator
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: my-super-secret-token
+      INFLUXDB_ORG: spring_factory
+      INFLUXDB_BUCKET: spring_data
+      MACHINE_NAME: smart_heater_01
+    dns_search: []
     depends_on:
       influxdb:
         condition: service_healthy
@@ -66,6 +89,7 @@ services:
       INTER_SERIES_JITTER: "0.08"
       PULSES_PER_PRODUCT_MIN: "8"
       PULSES_PER_PRODUCT_MAX: "15"
+    dns_search: []
     depends_on:
       influxdb:
         condition: service_healthy
