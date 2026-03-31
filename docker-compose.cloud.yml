@@ -33,6 +33,21 @@ services:
       retries: 5
 
   # --------------------------------------------------------------------------
+  # Nginx reverse proxy (stabilises connections from Grafana Cloud)
+  # --------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: spring_nginx
+    ports:
+      - "8087:8087"
+    volumes:
+      - ./nginx-influxdb.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --------------------------------------------------------------------------
   # Pulse Simulator (our Python app)
   # --------------------------------------------------------------------------
   pulse_simulator:
